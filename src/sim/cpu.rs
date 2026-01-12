@@ -1,5 +1,7 @@
 use thiserror::Error;
 
+use crate::sim::tokenizer::tokenize;
+
 #[derive(Debug, Error)]
 pub enum CpuError {
     #[error("There is no register named '{0}' in this processor")]
@@ -131,3 +133,12 @@ impl Cpu {
         self.gprs.set(reg, value);
         Ok(())
     }
+
+    pub fn run(&self, file: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let all_tokens = tokenize(file)?;
+        for tokens in all_tokens {
+            println!("{:?}", tokens);
+        }
+        Ok(())
+    }
+}
