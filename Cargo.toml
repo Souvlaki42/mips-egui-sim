@@ -9,3 +9,4 @@ egui = { version = "0.33.3", features = ["persistence"] }
 egui_extras = { version = "0.33.3", features = ["syntect"] }
 env_logger = "0.11.8"
 serde = { version = "1.0.228", features = ["derive"] }
+thiserror = "2.0.17"
