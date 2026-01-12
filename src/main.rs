@@ -1,22 +1,10 @@
-#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
+mod sim;
+use sim::cpu::Cpu;
 
-use eframe::egui;
+fn main() {
+    let cpu = Cpu::new();
 
-mod gui;
-
-use gui::app::SimMipsApp;
-
-fn main() -> eframe::Result {
-    env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
-
-    let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default().with_inner_size([320.0, 240.0]),
-        ..Default::default()
-    };
-
-    eframe::run_native(
-        "Mips Egui Simulator",
-        options,
-        Box::new(|cc| Ok(Box::new(SimMipsApp::new(cc)))),
-    )
+    if let Err(err) = cpu.run("examples/hello_world.asm") {
+        println!("Error: {:?}", err);
+    }
 }
