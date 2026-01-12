@@ -103,3 +103,31 @@ impl RegFile {
         }
     }
 }
+
+pub struct Cpu {
+    pub program_counter: u32,
+    pub high_register: u32,
+    pub low_register: u32,
+    gprs: RegFile,
+}
+
+impl Cpu {
+    pub fn new() -> Cpu {
+        Cpu {
+            program_counter: 0,
+            high_register: 0,
+            low_register: 0,
+            gprs: RegFile::default(),
+        }
+    }
+
+    fn get_register(&self, register: &str) -> Result<u32, CpuError> {
+        let reg = register.parse::<Register>()?;
+        Ok(self.gprs.get(reg))
+    }
+
+    fn set_register(&mut self, register: &str, value: u32) -> Result<(), CpuError> {
+        let reg = register.parse::<Register>()?;
+        self.gprs.set(reg, value);
+        Ok(())
+    }
