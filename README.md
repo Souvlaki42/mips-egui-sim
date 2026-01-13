@@ -9,7 +9,7 @@ When it's done, it will be compatible with [Mars](https://github.com/dpetersande
 ## Usage
 
 ```bash
-cargo run --release
+cargo run -- examples/hello_world.asm
 ```
 
 ## License
