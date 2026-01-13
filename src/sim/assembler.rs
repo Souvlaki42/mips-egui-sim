@@ -34,13 +34,20 @@ pub enum AssemblerError {
     InvalidString,
 }
 
-#[derive(Debug)]
 pub struct Symbol {
     address: usize,
     segment: Segment,
 }
 
-#[derive(Debug)]
+impl std::fmt::Debug for Symbol {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Symbol")
+            .field("address", &format_args!("0x{:08X}", self.address))
+            .field("segment", &self.segment)
+            .finish()
+    }
+}
+
 pub struct Assembler {
     symbols: HashMap<String, Symbol>,
     data_addr: usize, // Starts 0x10010000
@@ -49,6 +56,18 @@ pub struct Assembler {
     memory: Vec<u8>, // Unified memory
     text_lines: Vec<Instruction>,
     current_segment: Segment,
+}
+
+impl std::fmt::Debug for Assembler {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Assembler")
+            .field("symbols", &self.symbols)
+            .field("data_addr", &format_args!("0x{:08X}", self.data_addr))
+            .field("text_addr", &format_args!("0x{:08X}", self.text_addr))
+            .field("entry_point", &self.entry_point)
+            .field("text_lines", &self.text_lines)
+            .finish()
+    }
 }
 
 #[derive(Debug)]

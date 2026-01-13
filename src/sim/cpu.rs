@@ -135,14 +135,10 @@ impl Cpu {
     }
 
     pub fn run(&self, file: &str) -> Result<(), Box<dyn std::error::Error>> {
-        let all_tokens = tokenize(file)?;
-
-        for line_tokens in &all_tokens {
-            println!("{:?}", line_tokens);
-        }
+        let tokens = tokenize(file)?;
 
         let mut assembler = Assembler::new();
-        assembler.assemble(all_tokens)?;
+        assembler.assemble(tokens)?;
 
         println!("{:?}", assembler);
 
