@@ -2,7 +2,10 @@ use std::{collections::HashMap, ffi::CString, iter::Peekable, slice::Iter, str::
 
 use thiserror::Error;
 
-use crate::sim::tokenizer::{Directive, Token};
+use crate::sim::{
+    cpu::Register,
+    tokenizer::{Directive, Token},
+};
 
 pub const BASE_TEXT_ADDR: usize = 0x0040_0000;
 pub const BASE_DATA_ADDR: usize = 0x1001_0000;
@@ -21,6 +24,12 @@ pub enum AssemblerError {
     InvalidToken,
     #[error("Entrypoint missing")]
     EntrypointMissing,
+    #[error("Invalid instruction")]
+    InvalidInstruction,
+    #[error("Invalid register")]
+    InvalidRegister,
+    #[error("Invalid label")]
+    InvalidLabel,
     #[error("Invalid string")]
     InvalidString,
 }
@@ -44,7 +53,21 @@ pub struct Assembler {
 
 #[derive(Debug)]
 pub enum Instruction {
-    Pending(Vec<Token>),
+    AddImmediate {
+        res: Register,
+        reg: Register,
+        imm: i32,
+    },
+    LoadUpperImmediate {
+        res: Register,
+        imm: i32,
+    },
+    OrImmediate {
+        res: Register,
+        reg: Register,
+        imm: i32,
+    },
+    SystemCall,
 }
 
 impl Assembler {
@@ -82,7 +105,8 @@ impl Assembler {
             match tokens.next() {
                 Some(Token::Directive { kind }) => self.handle_directive(kind, &mut tokens)?,
                 Some(token) if matches!(token, Token::Operator { .. }) => {
-                    self.text_lines.push(Instruction::Pending(line_tokens))
+                    let expanded = self.expand_instruction(line_tokens)?;
+                    self.text_lines.extend(expanded);
                 }
                 None => continue,
                 _ => return Err(AssemblerError::InvalidToken),
@@ -92,6 +116,69 @@ impl Assembler {
         Ok(())
     }
 
+    pub fn expand_instruction(
+        &mut self,
+        tokens: Vec<Token>,
+    ) -> Result<Vec<Instruction>, AssemblerError> {
+        let mut iter = tokens.iter().peekable();
+        if let Some(Token::Operator { value }) = iter.next() {
+            let value_str = value.as_str();
+            match value_str {
+                "syscall" => return Ok(vec![Instruction::SystemCall]),
+                "li" => {
+                    let res = match iter.next() {
+                        Some(Token::Register { value }) => value
+                            .parse::<Register>()
+                            .map_err(|_| AssemblerError::InvalidRegister)?,
+                        _ => return Err(AssemblerError::InvalidInstruction),
+                    };
+                    let imm = match iter.next() {
+                        Some(Token::Decimal { value }) => value,
+                        _ => return Err(AssemblerError::InvalidInstruction),
+                    };
+                    return Ok(vec![Instruction::AddImmediate {
+                        res,
+                        reg: Register::ZERO,
+                        imm: *imm,
+                    }]);
+                }
+                "la" => {
+                    let res = match iter.next() {
+                        Some(Token::Register { value }) => value
+                            .parse::<Register>()
+                            .map_err(|_| AssemblerError::InvalidRegister)?,
+                        _ => return Err(AssemblerError::InvalidInstruction),
+                    };
+                    let label = match iter.next() {
+                        Some(Token::Label { name, decl: false }) => name,
+                        _ => return Err(AssemblerError::InvalidInstruction),
+                    };
+                    let address = self
+                        .symbols
+                        .get(label)
+                        .ok_or(AssemblerError::InvalidLabel)?
+                        .address;
+
+                    let high = address >> 16;
+                    let low = address & 0xffff;
+
+                    return Ok(vec![
+                        Instruction::LoadUpperImmediate {
+                            res,
+                            imm: high as i32,
+                        },
+                        Instruction::OrImmediate {
+                            res,
+                            reg: res,
+                            imm: low as i32,
+                        },
+                    ]);
+                }
+                _ => {}
+            }
+        }
+        Err(AssemblerError::InvalidInstruction)
+    }
 
     pub fn get_entry_point(&self) -> Option<String> {
         let entry = self.entry_point.clone()?;
