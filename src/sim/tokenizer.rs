@@ -47,6 +47,26 @@ fn parse_directive(token: &str) -> Result<Directive, TokenizerError> {
     }
 }
 
+fn unescape_string(s: &str) -> String {
+    let mut result = String::new();
+    let mut chars = s.chars();
+
+    while let Some(c) = chars.next() {
+        if c == '\\' {
+            match chars.next() {
+                Some('n') => result.push('\n'),
+                Some('t') => result.push('\t'),
+                Some('\\') => result.push('\\'),
+                Some('"') => result.push('"'),
+                _ => result.push(c), // or error
+            }
+        } else {
+            result.push(c);
+        }
+    }
+    result
+}
+
 pub fn tokenize(file_name: &str) -> Result<Vec<Vec<Token>>, TokenizerError> {
     let mut file =
         File::open(file_name).map_err(|_| TokenizerError::OpenFileError(file_name.to_string()))?;
@@ -88,7 +108,7 @@ pub fn tokenize(file_name: &str) -> Result<Vec<Vec<Token>>, TokenizerError> {
                 let directive = parse_directive(token)?;
                 tokens.push(Token::Directive { kind: directive });
             } else if token.starts_with('"') && token.ends_with('"') {
-                let value = token[1..token.len() - 1].to_string();
+                let value = unescape_string(&token[1..token.len() - 1]);
                 tokens.push(Token::Text { value });
             } else if token.starts_with("0x")
                 && let Ok(value) = i32::from_str_radix(&token[2..], 16)
