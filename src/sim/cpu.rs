@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use crate::sim::tokenizer::tokenize;
+use crate::sim::{assembler::Assembler, tokenizer::tokenize};
 
 #[derive(Debug, Error)]
 pub enum CpuError {
@@ -136,9 +136,16 @@ impl Cpu {
 
     pub fn run(&self, file: &str) -> Result<(), Box<dyn std::error::Error>> {
         let all_tokens = tokenize(file)?;
-        for tokens in all_tokens {
-            println!("{:?}", tokens);
+
+        for line_tokens in &all_tokens {
+            println!("{:?}", line_tokens);
         }
+
+        let mut assembler = Assembler::new();
+        assembler.assemble(all_tokens)?;
+
+        println!("{:?}", assembler);
+
         Ok(())
     }
 }
