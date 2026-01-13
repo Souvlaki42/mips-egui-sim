@@ -1,12 +1,7 @@
 [package]
-name = "mips-egui-sim"
+name = "mips-sim"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-eframe = { version = "0.33.3", features = ["persistence"] }
-egui = { version = "0.33.3", features = ["persistence"] }
-egui_extras = { version = "0.33.3", features = ["syntect"] }
-env_logger = "0.11.8"
-serde = { version = "1.0.228", features = ["derive"] }
 thiserror = "2.0.17"

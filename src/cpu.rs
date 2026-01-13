@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use crate::sim::{assembler::Assembler, tokenizer::tokenize};
+use crate::{assembler::Assembler, tokenizer::tokenize};
 
 #[derive(Debug, Error)]
 pub enum CpuError {

@@ -1,4 +1,4 @@
-# MIPS Egui Simulator
+# MIPS Simulator
 
 A simple MIPS simulator written in Rust.
 
@@ -13,4 +13,5 @@ cargo run --release
 ```
 
 ## License
+
 This project is licensed under the UNLICENSE License.

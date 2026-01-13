@@ -2,7 +2,7 @@ use std::{collections::HashMap, ffi::CString, iter::Peekable, slice::Iter, str::
 
 use thiserror::Error;
 
-use crate::sim::{
+use crate::{
     cpu::Register,
     tokenizer::{Directive, Token},
 };

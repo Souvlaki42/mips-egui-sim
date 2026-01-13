@@ -1,5 +1,8 @@
-mod sim;
-use sim::cpu::Cpu;
+mod assembler;
+mod cpu;
+mod tokenizer;
+
+use cpu::Cpu;
 
 fn main() {
     let cpu = Cpu::new();
