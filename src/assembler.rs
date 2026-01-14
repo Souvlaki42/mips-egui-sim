@@ -150,37 +150,38 @@ impl Assembler {
             let value_str = value.as_str();
             match value_str {
                 "syscall" => return Ok(vec![Instruction::SystemCall]),
+                "addi" => {
+                    let res = self.parse_register(&mut iter)?;
+                    let reg = self.parse_register(&mut iter)?;
+                    let imm = self.parse_immediate(&mut iter)?;
+                    return Ok(vec![Instruction::AddImmediate { res, reg, imm }]);
+                }
+                "lui" => {
+                    let res = self.parse_register(&mut iter)?;
+                    let imm = self.parse_immediate(&mut iter)?;
+                    return Ok(vec![Instruction::LoadUpperImmediate { res, imm }]);
+                }
+                "ori" => {
+                    let res = self.parse_register(&mut iter)?;
+                    let reg = self.parse_register(&mut iter)?;
+                    let imm = self.parse_immediate(&mut iter)?;
+                    return Ok(vec![Instruction::OrImmediate { res, reg, imm }]);
+                }
                 "li" => {
-                    let res = match iter.next() {
-                        Some(Token::Register { value }) => value
-                            .parse::<Register>()
-                            .map_err(|e| AssemblerError::InvalidRegister(e))?,
-                        _ => return Err(AssemblerError::InvalidInstruction),
-                    };
-                    let imm = match iter.next() {
-                        Some(Token::Decimal { value }) => value,
-                        _ => return Err(AssemblerError::InvalidInstruction),
-                    };
+                    let res = self.parse_register(&mut iter)?;
+                    let imm = self.parse_immediate(&mut iter)?;
                     return Ok(vec![Instruction::AddImmediate {
                         res,
                         reg: Register::ZERO,
-                        imm: *imm,
+                        imm: imm,
                     }]);
                 }
                 "la" => {
-                    let res = match iter.next() {
-                        Some(Token::Register { value }) => value
-                            .parse::<Register>()
-                            .map_err(|e| AssemblerError::InvalidRegister(e))?,
-                        _ => return Err(AssemblerError::InvalidInstruction),
-                    };
-                    let label = match iter.next() {
-                        Some(Token::Label { name, decl: false }) => name,
-                        _ => return Err(AssemblerError::InvalidInstruction),
-                    };
+                    let res = self.parse_register(&mut iter)?;
+                    let label = self.parse_label(&mut iter)?;
                     let address = self
                         .symbols
-                        .get(label)
+                        .get(&label)
                         .ok_or(AssemblerError::InvalidLabel)?
                         .address;
 
@@ -286,6 +287,30 @@ impl Assembler {
                 }
             }
             _ => Err(AssemblerError::UnknownDirective),
+        }
+    }
+
+    fn parse_register(&self, iter: &mut Peekable<Iter<Token>>) -> Result<Register, AssemblerError> {
+        match iter.next() {
+            Some(Token::Register { value }) => value
+                .parse::<Register>()
+                .map_err(|e| AssemblerError::InvalidRegister(e)),
+            _ => Err(AssemblerError::InvalidInstruction),
+        }
+    }
+
+    fn parse_immediate(&self, iter: &mut Peekable<Iter<Token>>) -> Result<i32, AssemblerError> {
+        match iter.next() {
+            Some(Token::Decimal { value }) => Ok(*value),
+            Some(Token::Hex { value }) => Ok(*value),
+            _ => Err(AssemblerError::InvalidInstruction),
+        }
+    }
+
+    fn parse_label(&self, iter: &mut Peekable<Iter<Token>>) -> Result<String, AssemblerError> {
+        match iter.next() {
+            Some(Token::Label { name, decl: false }) => Ok(name.clone()),
+            _ => Err(AssemblerError::InvalidLabel),
         }
     }
 }
