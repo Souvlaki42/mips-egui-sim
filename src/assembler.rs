@@ -178,14 +178,42 @@ impl Assembler {
                     let imm = self.parse_immediate(&mut iter)?;
                     return Ok(vec![Instruction::OrImmediate { res, reg, imm }]);
                 }
+                "move" => {
+                    let res = self.parse_register(&mut iter)?;
+                    let reg = self.parse_register(&mut iter)?;
+                    return Ok(vec![Instruction::AddUnsigned {
+                        res,
+                        reg,
+                        ret: Register::ZERO,
+                    }]);
+                }
                 "li" => {
                     let res = self.parse_register(&mut iter)?;
                     let imm = self.parse_immediate(&mut iter)?;
-                    return Ok(vec![Instruction::AddImmediate {
-                        res,
-                        reg: Register::ZERO,
-                        imm: imm,
-                    }]);
+
+                    if imm >= -32768 && imm <= 32767 {
+                        return Ok(vec![Instruction::AddImmediate {
+                            res,
+                            reg: Register::ZERO,
+                            imm,
+                        }]);
+                    } else if (imm & 0xFFFF) == 0 {
+                        return Ok(vec![Instruction::LoadUpperImmediate {
+                            res,
+                            imm: (imm >> 16),
+                        }]);
+                    } else {
+                        let high = (imm >> 16) + if (imm & 0x8000) != 0 { 1 } else { 0 };
+                        let low = imm & 0xFFFF;
+                        return Ok(vec![
+                            Instruction::LoadUpperImmediate { res, imm: high },
+                            Instruction::AddImmediate {
+                                res,
+                                reg: res,
+                                imm: low,
+                            },
+                        ]);
+                    }
                 }
                 "la" => {
                     let res = self.parse_register(&mut iter)?;
