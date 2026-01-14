@@ -33,8 +33,8 @@ pub enum AssemblerError {
     InvalidLabel,
     #[error("Invalid string")]
     InvalidString,
-    #[error("Tokennization failed: {0}")]
-    TokennizationFailed(#[from] TokenizerError),
+    #[error("Tokenization failed: {0}")]
+    TokenizationFailed(#[from] TokenizerError),
 }
 
 pub struct Symbol {
@@ -53,8 +53,8 @@ impl std::fmt::Debug for Symbol {
 
 pub struct Assembler {
     symbols: HashMap<String, Symbol>,
-    data_addr: u32, // Starts 0x10010000
-    text_addr: u32, // Starts 0x00400000
+    data_addr: u32,
+    text_addr: u32,
     entry_point: Option<String>,
     memory: Vec<u8>,
     text_lines: Vec<Instruction>,

@@ -11,6 +11,8 @@ use crate::{
 pub enum SimulatorError {
     #[error("Register error: {0}")]
     RegisterError(#[from] RegisterError),
+    #[error("Unknown syscall: {0}")]
+    UnknownSyscall(u32),
     #[error("No more instructions")]
     NoMoreInstructions,
 }
@@ -79,7 +81,7 @@ impl Simulator {
                 return Err(SimulatorError::NoMoreInstructions);
             }
             _ => {
-                println!("Unknown syscall: {}", v0);
+                return Err(SimulatorError::UnknownSyscall(v0));
             }
         }
         Ok(())

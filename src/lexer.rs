@@ -74,7 +74,7 @@ fn unescape_string(s: &str) -> String {
                 Some('t') => result.push('\t'),
                 Some('\\') => result.push('\\'),
                 Some('"') => result.push('"'),
-                _ => result.push(c), // or error
+                _ => result.push(c),
             }
         } else {
             result.push(c);
