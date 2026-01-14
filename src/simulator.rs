@@ -1,7 +1,6 @@
 use crate::{
     assembler::Assembler,
     cpu::{Cpu, CpuError, Register},
-    tokenizer::tokenize,
 };
 
 #[derive(Debug)]

@@ -1,7 +1,7 @@
 mod assembler;
 mod cpu;
+mod lexer;
 mod simulator;
-mod tokenizer;
 
 use simulator::Simulator;
 use std::env;

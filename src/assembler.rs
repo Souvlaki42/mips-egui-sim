@@ -4,7 +4,7 @@ use thiserror::Error;
 
 use crate::{
     cpu::Register,
-    tokenizer::{Directive, Token},
+    lexer::{Directive, Token, TokenizerError, tokenize},
 };
 
 pub const BASE_TEXT_ADDR: usize = 0x0040_0000;

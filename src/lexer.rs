@@ -15,13 +15,29 @@ pub enum Directive {
 
 #[derive(Debug, Clone)]
 pub enum Token {
-    Directive { kind: Directive },
-    Register { value: String },
-    Label { name: String, decl: bool },
-    Hex { value: i32 },
-    Decimal { value: i32 },
-    Operator { value: String },
-    Text { value: String },
+    Directive {
+        kind: Directive,
+    },
+    Register {
+        value: String,
+    },
+    Label {
+        name: String,
+        decl: bool,
+    },
+    #[allow(dead_code)]
+    Hex {
+        value: i32,
+    },
+    Decimal {
+        value: i32,
+    },
+    Operator {
+        value: String,
+    },
+    Text {
+        value: String,
+    },
 }
 
 #[derive(Debug, Error)]
