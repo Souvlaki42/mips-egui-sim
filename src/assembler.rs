@@ -80,6 +80,11 @@ pub enum Instruction {
         reg: Register,
         imm: i32,
     },
+    AddUnsigned {
+        res: Register,
+        reg: Register,
+        ret: Register,
+    },
     LoadUpperImmediate {
         res: Register,
         imm: i32,
@@ -155,6 +160,12 @@ impl Assembler {
                     let reg = self.parse_register(&mut iter)?;
                     let imm = self.parse_immediate(&mut iter)?;
                     return Ok(vec![Instruction::AddImmediate { res, reg, imm }]);
+                }
+                "addu" => {
+                    let res = self.parse_register(&mut iter)?;
+                    let reg = self.parse_register(&mut iter)?;
+                    let ret = self.parse_register(&mut iter)?;
+                    return Ok(vec![Instruction::AddUnsigned { res, reg, ret }]);
                 }
                 "lui" => {
                     let res = self.parse_register(&mut iter)?;
