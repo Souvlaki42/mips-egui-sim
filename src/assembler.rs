@@ -3,12 +3,13 @@ use std::{collections::HashMap, ffi::CString, iter::Peekable, slice::Iter, str::
 use thiserror::Error;
 
 use crate::{
-    cpu::Register,
     lexer::{Directive, Token, TokenizerError, tokenize},
+    registers::{Register, RegisterError},
 };
 
-pub const BASE_TEXT_ADDR: usize = 0x0040_0000;
-pub const BASE_DATA_ADDR: usize = 0x1001_0000;
+pub const BASE_TEXT_ADDR: u32 = 0x0040_0000;
+pub const BASE_DATA_ADDR: u32 = 0x1001_0000;
+pub const MEMORY_SIZE: usize = 64 * 1024;
 
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
 enum Segment {
@@ -26,16 +27,18 @@ pub enum AssemblerError {
     EntrypointMissing,
     #[error("Invalid instruction")]
     InvalidInstruction,
-    #[error("Invalid register")]
-    InvalidRegister,
+    #[error("Invalid register: {0}")]
+    InvalidRegister(#[from] RegisterError),
     #[error("Invalid label")]
     InvalidLabel,
     #[error("Invalid string")]
     InvalidString,
+    #[error("Tokennization failed: {0}")]
+    TokennizationFailed(#[from] TokenizerError),
 }
 
 pub struct Symbol {
-    address: usize,
+    address: u32,
     segment: Segment,
 }
 
@@ -50,10 +53,10 @@ impl std::fmt::Debug for Symbol {
 
 pub struct Assembler {
     symbols: HashMap<String, Symbol>,
-    data_addr: usize, // Starts 0x10010000
-    text_addr: usize, // Starts 0x00400000
+    data_addr: u32, // Starts 0x10010000
+    text_addr: u32, // Starts 0x00400000
     entry_point: Option<String>,
-    memory: Vec<u8>, // Unified memory
+    memory: Vec<u8>,
     text_lines: Vec<Instruction>,
     current_segment: Segment,
 }
@@ -70,7 +73,7 @@ impl std::fmt::Debug for Assembler {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum Instruction {
     AddImmediate {
         res: Register,
@@ -96,13 +99,16 @@ impl Assembler {
             data_addr: BASE_DATA_ADDR,
             text_addr: BASE_TEXT_ADDR,
             entry_point: None,
-            memory: Vec::new(),
+            memory: vec![0; MEMORY_SIZE],
             text_lines: Vec::new(),
             current_segment: Segment::Text,
         }
     }
 
-    pub fn assemble(&mut self, tokenized: Vec<Vec<Token>>) -> Result<(), AssemblerError> {
+    // TODO: Add support for forward references
+    pub fn assemble(&mut self, file_name: &str) -> Result<(), AssemblerError> {
+        let tokenized = tokenize(file_name)?;
+
         for line_tokens in tokenized {
             let mut tokens = line_tokens.iter().peekable();
 
@@ -148,7 +154,7 @@ impl Assembler {
                     let res = match iter.next() {
                         Some(Token::Register { value }) => value
                             .parse::<Register>()
-                            .map_err(|_| AssemblerError::InvalidRegister)?,
+                            .map_err(|e| AssemblerError::InvalidRegister(e))?,
                         _ => return Err(AssemblerError::InvalidInstruction),
                     };
                     let imm = match iter.next() {
@@ -165,7 +171,7 @@ impl Assembler {
                     let res = match iter.next() {
                         Some(Token::Register { value }) => value
                             .parse::<Register>()
-                            .map_err(|_| AssemblerError::InvalidRegister)?,
+                            .map_err(|e| AssemblerError::InvalidRegister(e))?,
                         _ => return Err(AssemblerError::InvalidInstruction),
                     };
                     let label = match iter.next() {
@@ -199,21 +205,30 @@ impl Assembler {
         Err(AssemblerError::InvalidInstruction)
     }
 
-    pub fn get_entry_point(&self) -> Option<String> {
-        let entry = self.entry_point.clone()?;
-        let entry_symbol = self.symbols.get(&entry)?;
-        Some(entry_symbol.address.to_string())
+    pub fn get_entry_point(&self) -> u32 {
+        match &self.entry_point {
+            Some(entry) => match self.symbols.get(entry) {
+                Some(symbol) => symbol.address,
+                None => BASE_TEXT_ADDR as u32,
+            },
+            None => BASE_TEXT_ADDR as u32,
+        }
     }
 
-    pub fn memory_at(&self, addr: usize) -> &[u8] {
-        let offset = if addr >= BASE_DATA_ADDR {
-            addr - BASE_DATA_ADDR
-        } else if addr >= BASE_TEXT_ADDR {
-            addr - BASE_TEXT_ADDR
-        } else {
-            return &[];
-        };
-        self.memory.get(offset..).unwrap_or(&[])
+    pub fn take_memory(&self) -> Vec<u8> {
+        self.memory.clone()
+    }
+
+    pub fn get_instructions(&self) -> HashMap<u32, Instruction> {
+        self.text_lines
+            .clone()
+            .into_iter()
+            .enumerate()
+            .map(|(i, inst)| {
+                let addr = BASE_TEXT_ADDR as u32 + (i as u32 * 4);
+                (addr, inst)
+            })
+            .collect()
     }
 
     fn handle_directive(
@@ -243,12 +258,12 @@ impl Assembler {
                     let bytes = CString::from_str(&value)
                         .map_err(|_| AssemblerError::InvalidString)?
                         .into_bytes_with_nul();
-                    let start_offset = self.data_addr - BASE_DATA_ADDR;
+                    let start_offset = (self.data_addr - BASE_DATA_ADDR) as usize;
                     let end_offset = start_offset + bytes.len();
                     self.memory
                         .resize(std::cmp::max(self.memory.len(), end_offset), 0);
                     self.memory[start_offset..end_offset].copy_from_slice(&bytes);
-                    self.data_addr += bytes.len();
+                    self.data_addr += bytes.len() as u32;
                     Ok(())
                 } else {
                     Err(AssemblerError::InvalidToken)
@@ -259,12 +274,12 @@ impl Assembler {
                     let bytes = CString::from_str(&value)
                         .map_err(|_| AssemblerError::InvalidString)?
                         .into_bytes();
-                    let start_offset = self.data_addr - BASE_DATA_ADDR;
+                    let start_offset = (self.data_addr - BASE_DATA_ADDR) as usize;
                     let end_offset = start_offset + bytes.len();
                     self.memory
                         .resize(std::cmp::max(self.memory.len(), end_offset), 0);
                     self.memory[start_offset..end_offset].copy_from_slice(&bytes);
-                    self.data_addr += bytes.len();
+                    self.data_addr += bytes.len() as u32;
                     Ok(())
                 } else {
                     Err(AssemblerError::InvalidToken)
