@@ -1,0 +1,7 @@
+{
+  "languages": {
+    "Assembly": {
+      "enable_language_server": false,
+    },
+  },
+}
