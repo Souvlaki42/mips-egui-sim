@@ -81,6 +81,7 @@ impl Simulator {
         std::io::stdin()
             .read_line(&mut input)
             .map_err(|e| SimulatorError::IoError(e))?;
+        input = input.trim().to_string();
         Ok(input)
     }
 

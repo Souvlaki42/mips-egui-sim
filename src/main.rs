@@ -33,7 +33,7 @@ fn main() {
             match err {
                 SimulatorError::NoMoreInstructions(value) => {
                     exit_code = value as i32;
-                    println!("The execution has ended");
+                    println!("\n-- program is finished running --");
                 }
                 _ => println!("Error: {:?}", err),
             }
