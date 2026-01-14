@@ -1,4 +1,7 @@
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    time::{SystemTime, SystemTimeError, UNIX_EPOCH},
+};
 
 use thiserror::Error;
 
@@ -19,6 +22,8 @@ pub enum SimulatorError {
     IoError(#[from] std::io::Error),
     #[error("Wrong input type: {0}")]
     WrongInputType(String),
+    #[error("Invalid system time: {0}")]
+    InvalidSystemTime(#[from] SystemTimeError),
 }
 
 #[derive(Debug)]
@@ -106,6 +111,19 @@ impl Simulator {
             17 => {
                 let value = self.registers.get(Register::A0);
                 return Err(SimulatorError::NoMoreInstructions(value));
+            }
+            30 => {
+                let duration = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .map_err(|e| SimulatorError::InvalidSystemTime(e))?;
+
+                let millis = duration.as_millis() as u64;
+
+                let low = (millis & 0xFFFFFFFF) as u32;
+                let high = (millis >> 32) as u32;
+
+                self.registers.set(Register::A0, low);
+                self.registers.set(Register::A1, high);
             }
             _ => {
                 return Err(SimulatorError::UnknownSyscall(v0));
