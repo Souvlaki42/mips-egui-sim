@@ -2,7 +2,7 @@
 
 A simple MIPS simulator written in Rust.
 
-It's a work in progress, can't really do much yet.
+It's a work in progress, can't really do much yet. It can only execute the simple example provided.
 
 When it's done, it will be compatible with [Mars](https://github.com/dpetersanderson/MARS)
 
