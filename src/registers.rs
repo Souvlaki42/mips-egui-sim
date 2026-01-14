@@ -1,14 +1,12 @@
 use thiserror::Error;
 
-use crate::{assembler::Assembler, tokenizer::tokenize};
-
 #[derive(Debug, Error)]
-pub enum CpuError {
+pub enum RegisterError {
     #[error("There is no register named '{0}' in this processor")]
     NoSuchRegister(String),
 }
 
-#[repr(u32)]
+#[repr(usize)]
 #[derive(Debug, Clone, Copy)]
 pub enum Register {
     ZERO = 0,
@@ -46,7 +44,7 @@ pub enum Register {
 }
 
 impl std::str::FromStr for Register {
-    type Err = CpuError;
+    type Err = RegisterError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "$zero" | "$0" => Ok(Register::ZERO),
@@ -81,46 +79,23 @@ impl std::str::FromStr for Register {
             "$sp" => Ok(Register::SP),
             "$fp" => Ok(Register::FP),
             "$ra" => Ok(Register::RA),
-            other => Err(CpuError::NoSuchRegister(other.to_string())),
+            other => Err(RegisterError::NoSuchRegister(other.to_string())),
         }
     }
 }
 
-#[derive(Debug, Clone, Copy, Default)]
-pub struct RegFile([u32; 32]);
+#[derive(Debug, Default)]
+pub struct RegisterFile([u32; 32]);
 
-impl RegFile {
+impl RegisterFile {
     pub fn get(&self, r: Register) -> u32 {
-        if r as usize == 0 {
-            0
-        } else {
-            self.0[r as usize]
-        }
+        self.0[r as usize]
     }
 
     pub fn set(&mut self, r: Register, val: u32) {
         let idx = r as usize;
         if idx != 0 {
             self.0[idx] = val;
-        }
-    }
-}
-
-#[derive(Debug)]
-pub struct Cpu {
-    pub pc: u32,
-    pub high: u32,
-    pub low: u32,
-    pub gprs: RegFile,
-}
-
-impl Cpu {
-    pub fn new() -> Cpu {
-        Cpu {
-            pc: 0,
-            high: 0,
-            low: 0,
-            gprs: RegFile::default(),
         }
     }
 }
