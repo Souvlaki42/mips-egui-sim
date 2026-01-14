@@ -1,8 +1,9 @@
 mod assembler;
 mod cpu;
+mod simulator;
 mod tokenizer;
 
-use cpu::Cpu;
+use simulator::Simulator;
 use std::env;
 
 fn main() {
@@ -11,9 +12,9 @@ fn main() {
         println!("Usage: {} <file>", args[0]);
         return;
     }
-    let cpu = Cpu::new();
+    let mut simulator = Simulator::new();
 
-    if let Err(err) = cpu.run(&args[1]) {
+    if let Err(err) = simulator.run(&args[1]) {
         println!("Error: {:?}", err);
     }
 }

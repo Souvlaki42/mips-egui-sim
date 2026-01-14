@@ -106,42 +106,21 @@ impl RegFile {
     }
 }
 
+#[derive(Debug)]
 pub struct Cpu {
-    pub program_counter: u32,
-    pub high_register: u32,
-    pub low_register: u32,
-    gprs: RegFile,
+    pub pc: u32,
+    pub high: u32,
+    pub low: u32,
+    pub gprs: RegFile,
 }
 
 impl Cpu {
     pub fn new() -> Cpu {
         Cpu {
-            program_counter: 0,
-            high_register: 0,
-            low_register: 0,
+            pc: 0,
+            high: 0,
+            low: 0,
             gprs: RegFile::default(),
         }
-    }
-
-    fn get_register(&self, register: &str) -> Result<u32, CpuError> {
-        let reg = register.parse::<Register>()?;
-        Ok(self.gprs.get(reg))
-    }
-
-    fn set_register(&mut self, register: &str, value: u32) -> Result<(), CpuError> {
-        let reg = register.parse::<Register>()?;
-        self.gprs.set(reg, value);
-        Ok(())
-    }
-
-    pub fn run(&self, file: &str) -> Result<(), Box<dyn std::error::Error>> {
-        let tokens = tokenize(file)?;
-
-        let mut assembler = Assembler::new();
-        assembler.assemble(tokens)?;
-
-        println!("{:?}", assembler);
-
-        Ok(())
     }
 }
