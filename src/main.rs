@@ -4,7 +4,7 @@ mod registers;
 mod simulator;
 
 use simulator::Simulator;
-use std::env;
+use std::{env, process};
 
 use crate::simulator::SimulatorError;
 
@@ -27,13 +27,18 @@ fn main() {
 
     let mut simulator = Simulator::new(instructions, memory, entry);
 
+    let mut exit_code = 0;
     loop {
         if let Err(err) = simulator.step() {
             match err {
-                SimulatorError::NoMoreInstructions => println!("The execution has ended"),
+                SimulatorError::NoMoreInstructions(value) => {
+                    exit_code = value as i32;
+                    println!("The execution has ended");
+                }
                 _ => println!("Error: {:?}", err),
             }
             break;
         }
     }
+    process::exit(exit_code);
 }
