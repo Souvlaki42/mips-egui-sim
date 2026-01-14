@@ -15,6 +15,10 @@ pub enum SimulatorError {
     UnknownSyscall(u32),
     #[error("No more instructions")]
     NoMoreInstructions,
+    #[error("I/O error: {0}")]
+    IoError(#[from] std::io::Error),
+    #[error("Wrong input type: {0}")]
+    WrongInputType(String),
 }
 
 #[derive(Debug)]
@@ -60,9 +64,21 @@ impl Simulator {
         Ok(())
     }
 
+    fn get_user_input(&mut self) -> Result<String, SimulatorError> {
+        let mut input = String::new();
+        std::io::stdin()
+            .read_line(&mut input)
+            .map_err(|e| SimulatorError::IoError(e))?;
+        Ok(input)
+    }
+
     fn handle_syscall(&mut self) -> Result<(), SimulatorError> {
         let v0 = self.registers.get(Register::V0);
         match v0 {
+            1 => {
+                let value = self.registers.get(Register::A0);
+                print!("{}", value);
+            }
             4 => {
                 let addr = self.registers.get(Register::A0) as usize;
                 let offset = addr - BASE_DATA_ADDR as usize;
@@ -76,6 +92,13 @@ impl Simulator {
 
                 let s = String::from_utf8_lossy(&bytes);
                 print!("{}", s);
+            }
+            5 => {
+                let input = self.get_user_input()?;
+                let value = input
+                    .parse::<u32>()
+                    .map_err(|_| SimulatorError::WrongInputType(input))?;
+                self.registers.set(Register::V0, value);
             }
             10 => {
                 return Err(SimulatorError::NoMoreInstructions);
