@@ -65,6 +65,13 @@ impl Simulator {
             Instruction::SystemCall => {
                 self.handle_syscall()?;
             }
+            Instruction::AddUnsigned { res, reg, ret } => {
+                let value = self
+                    .registers
+                    .get(reg)
+                    .wrapping_add(self.registers.get(ret));
+                self.registers.set(res, value);
+            }
         }
         Ok(())
     }
