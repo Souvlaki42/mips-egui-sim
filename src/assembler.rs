@@ -3,6 +3,7 @@ use std::{collections::HashMap, ffi::CString, iter::Peekable, slice::Iter, str::
 use thiserror::Error;
 
 use crate::{
+    CLIArgs,
     lexer::{Directive, Token, TokenizerError, tokenize},
     registers::{Register, RegisterError},
 };
@@ -111,10 +112,14 @@ impl Assembler {
     }
 
     // TODO: Add support for forward references
-    pub fn assemble(&mut self, file_name: &str) -> Result<(), AssemblerError> {
-        let tokenized = tokenize(file_name)?;
+    pub fn assemble(&mut self, args: &CLIArgs) -> Result<(), AssemblerError> {
+        let tokenized = tokenize(&args.source)?;
 
         for line_tokens in tokenized {
+            if args.tokens {
+                println!("{:?}", line_tokens);
+            }
+
             let mut tokens = line_tokens.iter().peekable();
 
             if let Some(Token::Label { name, decl: true }) = tokens.peek() {
@@ -136,7 +141,10 @@ impl Assembler {
                 Some(Token::Directive { kind }) => self.handle_directive(kind, &mut tokens)?,
                 Some(token) if matches!(token, Token::Operator { .. }) => {
                     let expanded = self.expand_instruction(line_tokens)?;
-                    self.text_lines.extend(expanded);
+                    self.text_lines.extend(&expanded);
+                    if args.instructions {
+                        println!("{:?}", expanded);
+                    }
                 }
                 None => continue,
                 _ => return Err(AssemblerError::InvalidToken),
