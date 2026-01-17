@@ -16,6 +16,7 @@ pub struct CLIArgs {
     help: bool,
     tokens: bool,
     instructions: bool,
+    memory: bool,
 }
 
 fn parse_args() -> CLIArgs {
@@ -36,6 +37,7 @@ fn parse_args() -> CLIArgs {
         || cli_args.source.is_empty();
     cli_args.tokens = args.contains(&"-t".to_string()) || args.contains(&"--tokens".to_string());
     cli_args.args = args.contains(&"-a".to_string()) || args.contains(&"--args".to_string());
+    cli_args.memory = args.contains(&"-m".to_string()) || args.contains(&"--memory".to_string());
     cli_args.instructions =
         args.contains(&"-i".to_string()) || args.contains(&"--instructions".to_string());
 
@@ -56,6 +58,7 @@ fn main() {
         println!("  -a, --args     Print the arguments");
         println!("  -t, --tokens   Print the tokens");
         println!("  -i, --instructions   Print the instructions");
+        println!("  -m, --memory   Print the memory");
         return;
     }
 
@@ -70,6 +73,11 @@ fn main() {
     }
 
     let memory = assembler.take_memory();
+
+    if args.memory {
+        println!("{:?}", memory);
+    }
+
     let instructions = assembler.get_instructions();
     let entry = assembler.get_entry_point();
 
