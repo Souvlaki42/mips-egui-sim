@@ -34,6 +34,8 @@ pub enum AssemblerError {
     InvalidLabel,
     #[error("Invalid string")]
     InvalidString,
+    #[error("Invalid byte value")]
+    InvalidByteValue,
     #[error("Tokenization failed: {0}")]
     TokenizationFailed(#[from] TokenizerError),
 }
@@ -333,6 +335,24 @@ impl Assembler {
                     Err(AssemblerError::InvalidToken)
                 }
             }
+            Directive::ByteDirective => {
+                while let Some(Token::Number { value }) = tokens.next() {
+                    if *value < -128 || *value > 255 {
+                        return Err(AssemblerError::InvalidByteValue);
+                    }
+
+                    let byte_val = *value as u8;
+                    let offset = (self.data_addr - BASE_DATA_ADDR) as usize;
+
+                    if offset >= self.memory.len() {
+                        self.memory.resize(offset + 1, 0);
+                    }
+
+                    self.memory[offset] = byte_val;
+                    self.data_addr += 1;
+                }
+                Ok(())
+            }
             _ => Err(AssemblerError::UnknownDirective),
         }
     }
@@ -348,8 +368,7 @@ impl Assembler {
 
     fn parse_immediate(&self, iter: &mut Peekable<Iter<Token>>) -> Result<i32, AssemblerError> {
         match iter.next() {
-            Some(Token::Decimal { value }) => Ok(*value),
-            Some(Token::Hex { value }) => Ok(*value),
+            Some(Token::Number { value }) => Ok(*value),
             _ => Err(AssemblerError::InvalidInstruction),
         }
     }
