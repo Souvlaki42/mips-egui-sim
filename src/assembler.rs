@@ -3,7 +3,7 @@ use std::{collections::HashMap, ffi::CString, iter::Peekable, slice::Iter, str::
 use thiserror::Error;
 
 use crate::{
-    CLIArgs,
+    RuntimeArgs,
     lexer::{Directive, Token, TokenizerError, tokenize},
     registers::{Register, RegisterError},
 };
@@ -114,8 +114,8 @@ impl Assembler {
     }
 
     // TODO: Add support for forward references
-    pub fn assemble(&mut self, args: &CLIArgs) -> Result<(), AssemblerError> {
-        let tokenized = tokenize(&args.source)?;
+    pub fn assemble(&mut self, args: &RuntimeArgs) -> Result<(), AssemblerError> {
+        let tokenized = tokenize(&args.file)?;
 
         for line_tokens in tokenized {
             if args.tokens {
