@@ -15,29 +15,12 @@ pub enum Directive {
 
 #[derive(Debug, Clone)]
 pub enum Token {
-    Directive {
-        kind: Directive,
-    },
-    Register {
-        value: String,
-    },
-    Label {
-        name: String,
-        decl: bool,
-    },
-    #[allow(dead_code)]
-    Hex {
-        value: i32,
-    },
-    Decimal {
-        value: i32,
-    },
-    Operator {
-        value: String,
-    },
-    Text {
-        value: String,
-    },
+    Directive { kind: Directive },
+    Register { value: String },
+    Label { name: String, decl: bool },
+    Number { value: i32 },
+    Operator { value: String },
+    Text { value: String },
 }
 
 #[derive(Debug, Error)]
@@ -48,6 +31,8 @@ pub enum TokenizerError {
     ReadFileError(String),
     #[error("Unknown directive '{0}'")]
     UnknownDirective(String),
+    #[error("Invalid byte ''{0}'")]
+    InvalidByte(String),
 }
 
 fn parse_directive(token: &str) -> Result<Directive, TokenizerError> {
@@ -74,6 +59,7 @@ fn unescape_string(s: &str) -> String {
                 Some('t') => result.push('\t'),
                 Some('\\') => result.push('\\'),
                 Some('"') => result.push('"'),
+                Some('\'') => result.push('\''),
                 _ => result.push(c),
             }
         } else {
@@ -104,13 +90,19 @@ pub fn tokenize(file_name: &str) -> Result<Vec<Vec<Token>>, TokenizerError> {
 
         let mut tokens = Vec::new();
         let mut inside_string = false;
+        let mut inside_byte = false;
 
         let raw_tokens: Vec<&str> = line
             .split(|c: char| {
-                if c == '"' {
+                if c == '"' && !inside_byte {
                     inside_string = !inside_string;
                     return false;
+                } else if c == '\'' && !inside_string {
+                    inside_byte = !inside_byte;
+                    return false;
                 } else if inside_string {
+                    return false;
+                } else if inside_byte {
                     return false;
                 } else {
                     c.is_whitespace() || c == ','
@@ -126,12 +118,27 @@ pub fn tokenize(file_name: &str) -> Result<Vec<Vec<Token>>, TokenizerError> {
             } else if token.starts_with('"') && token.ends_with('"') {
                 let value = unescape_string(&token[1..token.len() - 1]);
                 tokens.push(Token::Text { value });
+            } else if token.starts_with('\'') && token.ends_with('\'') {
+                let unescaped = unescape_string(&token[1..token.len() - 1]);
+                let bytes = unescaped.as_bytes();
+
+                if bytes.len() != 1 {
+                    return Err(TokenizerError::InvalidByte(unescaped));
+                }
+
+                tokens.push(Token::Number {
+                    value: bytes[0] as i32,
+                });
+            } else if token.starts_with("0b")
+                && let Ok(value) = i32::from_str_radix(&token[2..], 2)
+            {
+                tokens.push(Token::Number { value });
             } else if token.starts_with("0x")
                 && let Ok(value) = i32::from_str_radix(&token[2..], 16)
             {
-                tokens.push(Token::Hex { value });
+                tokens.push(Token::Number { value });
             } else if let Ok(value) = token.parse::<i32>() {
-                tokens.push(Token::Decimal { value });
+                tokens.push(Token::Number { value });
             } else if token.starts_with("$") {
                 tokens.push(Token::Register {
                     value: token.to_string(),
