@@ -1,10 +1,10 @@
-.data # τμήμα δεδομένων
-str: .asciiz "Hello world\n"
-.text # τμήμα κώδικα
+.data
+  str: .asciiz "Hello world\n"
+.text
 .globl main
 main:
-li $v0, 4 # κωδικός 4 για να εμφανιστεί το str
-la $a0, str # φόρτωσε τη διεύθυνση του str στον καταχωρητή $a0
-syscall # κλήση συστήματος
-li $v0, 10 # κωδικός 10 για τερματισμό του προγράμματος
-syscall # κλήση συστήματος
+  li $v0, 4
+  la $a0, str
+  syscall
+  li $v0, 10
+  syscall
