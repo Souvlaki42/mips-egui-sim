@@ -87,11 +87,14 @@ fn main() {
     loop {
         if let Err(err) = simulator.step() {
             match err {
-                SimulatorError::NoMoreInstructions(value) => {
+                SimulatorError::Exit(value) => {
                     exit_code = value as i32;
                     println!("\n-- program is finished running --");
                 }
-                _ => println!("Error: {:?}", err),
+                SimulatorError::NoMoreInstructions => {
+                    println!("\n-- program is finished running (dropped off bottom) --");
+                }
+                _ => println!("Simulator Error: {:?}", err),
             }
             break;
         }

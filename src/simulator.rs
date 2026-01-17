@@ -16,8 +16,10 @@ pub enum SimulatorError {
     RegisterError(#[from] RegisterError),
     #[error("Unknown syscall: {0}")]
     UnknownSyscall(u32),
-    #[error("No more instructions: {0}")]
-    NoMoreInstructions(u32),
+    #[error("Exit with code {0}")]
+    Exit(u32),
+    #[error("No more instructions")]
+    NoMoreInstructions,
     #[error("I/O error: {0}")]
     IoError(#[from] std::io::Error),
     #[error("Wrong input type: {0}")]
@@ -114,11 +116,11 @@ impl Simulator {
                 self.registers.set(Register::V0, value);
             }
             10 => {
-                return Err(SimulatorError::NoMoreInstructions(0));
+                return Err(SimulatorError::Exit(0));
             }
             17 => {
                 let value = self.registers.get(Register::A0);
-                return Err(SimulatorError::NoMoreInstructions(value));
+                return Err(SimulatorError::Exit(value));
             }
             30 => {
                 let duration = SystemTime::now()
@@ -144,7 +146,7 @@ impl Simulator {
         let instruction = self
             .instructions
             .get(&self.pc)
-            .ok_or(SimulatorError::NoMoreInstructions(0))?
+            .ok_or(SimulatorError::NoMoreInstructions)?
             .clone();
 
         self.execute_instruction(instruction)?;
