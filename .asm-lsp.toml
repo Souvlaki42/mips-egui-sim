@@ -1,0 +1,4 @@
+[default_config]
+version = "0.10.1"
+assembler = "mars"
+instruction_set = "mips"
