@@ -31,8 +31,8 @@ pub enum AssemblerError {
     InvalidInstruction,
     #[error("Invalid register: {0}")]
     InvalidRegister(#[from] RegisterError),
-    #[error("Invalid label")]
-    InvalidLabel,
+    #[error("Invalid label: {0}")]
+    InvalidLabel(String),
     #[error("Invalid string")]
     InvalidString,
     #[error("Invalid byte value")]
@@ -44,7 +44,6 @@ pub enum AssemblerError {
 #[derive(Debug, Clone, Copy)]
 pub struct Symbol {
     address: Address,
-    #[allow(dead_code)]
     segment: Segment,
 }
 
@@ -210,14 +209,17 @@ impl Assembler {
                 "la" => {
                     let res = self.parse_register(&mut iter)?;
                     let label = self.parse_label(&mut iter)?;
-                    let address = self
+                    let symbol = self
                         .symbols
                         .get(&label)
-                        .ok_or(AssemblerError::InvalidLabel)?
-                        .address;
+                        .ok_or(AssemblerError::InvalidLabel(label.clone()))?;
 
-                    let high = address >> 16;
-                    let low = address & 0xffff.into();
+                    if symbol.segment != Segment::Data {
+                        return Err(AssemblerError::InvalidLabel(label.clone()));
+                    }
+
+                    let high = (*symbol).address >> 16;
+                    let low = (*symbol).address & 0xffff.into();
 
                     return Ok(vec![
                         Instruction::LoadUpperImmediate {
@@ -358,7 +360,7 @@ impl Assembler {
     fn parse_label(&self, iter: &mut Peekable<Iter<Token>>) -> Result<String, AssemblerError> {
         match iter.next() {
             Some(Token::Label { name, decl: false }) => Ok(name.clone()),
-            _ => Err(AssemblerError::InvalidLabel),
+            _ => Err(AssemblerError::InvalidLabel("Not a label".to_string())),
         }
     }
 }
