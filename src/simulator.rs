@@ -6,6 +6,7 @@ use std::{
 use thiserror::Error;
 
 use crate::{
+    address::Address,
     assembler::{BASE_DATA_ADDR, Instruction, MEMORY_SIZE},
     registers::{Register, RegisterError, RegisterFile},
 };
@@ -32,12 +33,16 @@ pub enum SimulatorError {
 pub struct Simulator {
     memory: [u8; MEMORY_SIZE],
     registers: RegisterFile,
-    instructions: HashMap<u32, Instruction>,
-    pc: u32,
+    instructions: HashMap<Address, Instruction>,
+    pc: Address,
 }
 
 impl Simulator {
-    pub fn new(instructions: HashMap<u32, Instruction>, memory: Vec<u8>, entry: u32) -> Simulator {
+    pub fn new(
+        instructions: HashMap<Address, Instruction>,
+        memory: Vec<u8>,
+        entry: Address,
+    ) -> Simulator {
         let mut mem_array = [0u8; MEMORY_SIZE];
         let len = memory.len().min(MEMORY_SIZE);
         mem_array[..len].copy_from_slice(&memory[..len]);
@@ -96,7 +101,7 @@ impl Simulator {
             }
             4 => {
                 let addr = self.registers.get(Register::A0) as usize;
-                let offset = addr - BASE_DATA_ADDR as usize;
+                let offset: usize = (addr - BASE_DATA_ADDR).into();
 
                 let mut bytes = Vec::new();
                 let mut i = offset;

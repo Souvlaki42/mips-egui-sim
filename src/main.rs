@@ -1,3 +1,4 @@
+mod address;
 mod assembler;
 mod lexer;
 mod registers;
