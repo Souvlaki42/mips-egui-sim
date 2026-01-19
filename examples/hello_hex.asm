@@ -1,0 +1,10 @@
+.data
+  bytes: .byte 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x48, 0x65, 0x78
+.text
+.globl main
+main:
+  li $v0, 4
+  la $a0, bytes
+  syscall
+  li $v0, 10
+  syscall
