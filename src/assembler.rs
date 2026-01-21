@@ -5,6 +5,7 @@ use thiserror::Error;
 use crate::{
     address::Address,
     args::Args,
+    instructions::Instruction,
     lexer::{Directive, Token, TokenizerError, tokenize},
     registers::{Register, RegisterError},
 };
@@ -34,6 +35,8 @@ pub enum AssemblerError {
     InvalidLabel(String),
     #[error("Invalid string")]
     InvalidString,
+    #[error("Invalid immediate value: {0}")]
+    InvalidImmediateValue(i32),
     #[error("Invalid byte value")]
     InvalidByteValue,
     #[error("Tokenization failed: {0}")]
@@ -54,30 +57,6 @@ pub struct Assembler<'a> {
     entry_point: Option<String>,
     text_lines: Vec<Instruction>,
     current_segment: Segment,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum Instruction {
-    AddImmediate {
-        res: Register,
-        reg: Register,
-        imm: i32,
-    },
-    AddUnsigned {
-        res: Register,
-        reg: Register,
-        ret: Register,
-    },
-    LoadUpperImmediate {
-        res: Register,
-        imm: i32,
-    },
-    OrImmediate {
-        res: Register,
-        reg: Register,
-        imm: i32,
-    },
-    SystemCall,
 }
 
 impl<'a> Assembler<'a> {
@@ -183,28 +162,31 @@ impl<'a> Assembler<'a> {
                 }
                 "li" => {
                     let res = self.parse_register(&mut iter)?;
-                    let imm = self.parse_immediate(&mut iter)?;
+                    let imm = self.parse_immediate(&mut iter)?; // Still i32 here
 
                     if (-32768..=32767).contains(&imm) {
+                        // Expand to: addiu $res, $zero, imm
                         return Ok(vec![Instruction::AddImmediate {
                             res,
                             reg: Register::Zero,
-                            imm,
+                            imm: imm as i16,
                         }]);
-                    } else if (imm & 0xFFFF) == 0 {
+                    } else if (imm as u16 & 0xFFFF as u16) == 0 {
+                        // Expand to: lui $res, upper
                         return Ok(vec![Instruction::LoadUpperImmediate {
                             res,
-                            imm: (imm >> 16),
+                            imm: (imm >> 16) as i16,
                         }]);
                     } else {
-                        let high = (imm >> 16) + if (imm & 0x8000) != 0 { 1 } else { 0 };
-                        let low = imm & 0xFFFF;
+                        // Expand to: lui + ori
+                        let upper = (imm >> 16) as i16;
+                        let lower = (imm as u16 & 0xFFFF as u16) as i16;
                         return Ok(vec![
-                            Instruction::LoadUpperImmediate { res, imm: high },
-                            Instruction::AddImmediate {
+                            Instruction::LoadUpperImmediate { res, imm: upper },
+                            Instruction::OrImmediate {
                                 res,
                                 reg: res,
-                                imm: low,
+                                imm: lower,
                             },
                         ]);
                     }
@@ -343,9 +325,15 @@ impl<'a> Assembler<'a> {
         }
     }
 
-    fn parse_immediate(&self, iter: &mut Peekable<Iter<Token>>) -> Result<i32, AssemblerError> {
+    fn parse_immediate(&self, iter: &mut Peekable<Iter<Token>>) -> Result<i16, AssemblerError> {
         match iter.next() {
-            Some(Token::Number { value }) => Ok(*value),
+            Some(Token::Number { value }) => {
+                let value = *value;
+                let number = value
+                    .try_into()
+                    .map_err(|_| AssemblerError::InvalidImmediateValue(value))?;
+                Ok(number)
+            }
             _ => Err(AssemblerError::InvalidInstruction),
         }
     }

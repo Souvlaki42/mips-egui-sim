@@ -7,7 +7,8 @@ use thiserror::Error;
 
 use crate::{
     address::Address,
-    assembler::{BASE_DATA_ADDR, Instruction},
+    assembler::BASE_DATA_ADDR,
+    instructions::Instruction,
     registers::{Register, RegisterError, RegisterFile},
 };
 
@@ -31,8 +32,8 @@ pub enum SimulatorError {
 
 #[derive(Debug)]
 pub struct Simulator<'a> {
-    memory: &'a mut HashMap<Address, u8>,
-    registers: RegisterFile,
+    pub memory: &'a mut HashMap<Address, u8>,
+    pub registers: RegisterFile,
     instructions: HashMap<Address, Instruction>,
     pc: Address,
 }
@@ -88,7 +89,7 @@ impl<'a> Simulator<'a> {
         Ok(input)
     }
 
-    fn handle_syscall(&mut self) -> Result<(), SimulatorError> {
+    pub fn handle_syscall(&mut self) -> Result<(), SimulatorError> {
         let v0 = self.registers.get(Register::V0);
         match v0 {
             1 => {
